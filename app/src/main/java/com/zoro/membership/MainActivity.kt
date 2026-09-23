@@ -3,9 +3,12 @@ package com.zoro.membership
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +33,8 @@ class MainActivity : ComponentActivity() {
 fun ZoroApp() {
     var language by remember { mutableStateOf("en") }
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
+    var selectedCategory by remember { mutableStateOf<Category?>(null) }
+    var merchants by remember { mutableStateOf<List<Merchant>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -46,10 +51,31 @@ fun ZoroApp() {
         }
     }
 
+    // When a category is tapped, load its merchants
+    LaunchedEffect(selectedCategory) {
+        val category = selectedCategory ?: return@LaunchedEffect
+        isLoading = true
+        errorMessage = null
+        try {
+            merchants = SupabaseClient.getMerchants(category.id)
+        } catch (e: Exception) {
+            errorMessage = e.message
+        } finally {
+            isLoading = false
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Zoro") },
+                title = { Text(selectedCategory?.nameFor(language) ?: "Zoro") },
+                navigationIcon = {
+                    if (selectedCategory != null) {
+                        IconButton(onClick = { selectedCategory = null }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                },
                 actions = {
                     LanguageToggle(current = language, onChange = { language = it })
                 }
@@ -60,22 +86,50 @@ fun ZoroApp() {
             when {
                 isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 errorMessage != null -> Text(
-                    "Couldn't load categories: $errorMessage",
+                    "Something went wrong: $errorMessage",
                     modifier = Modifier.align(Alignment.Center).padding(24.dp)
                 )
-                categories.isEmpty() -> Text(
-                    "No categories yet.",
-                    modifier = Modifier.align(Alignment.Center)
+                selectedCategory == null -> CategoryListScreen(
+                    categories = categories,
+                    language = language,
+                    onSelect = { selectedCategory = it }
                 )
-                else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(categories) { category ->
-                        ListItem(
-                            headlineContent = { Text(category.nameFor(language)) }
-                        )
-                        Divider()
-                    }
-                }
+                else -> MerchantListScreen(merchants = merchants, language = language)
             }
+        }
+    }
+}
+
+@Composable
+fun CategoryListScreen(categories: List<Category>, language: String, onSelect: (Category) -> Unit) {
+    if (categories.isEmpty()) {
+        Text("No categories yet.", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center))
+        return
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(categories) { category ->
+            ListItem(
+                headlineContent = { Text(category.nameFor(language)) },
+                modifier = Modifier.clickable { onSelect(category) }
+            )
+            Divider()
+        }
+    }
+}
+
+@Composable
+fun MerchantListScreen(merchants: List<Merchant>, language: String) {
+    if (merchants.isEmpty()) {
+        Text("No stores in this category yet.", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center))
+        return
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(merchants) { merchant ->
+            ListItem(
+                headlineContent = { Text(merchant.nameFor(language)) },
+                supportingContent = { Text(merchant.bioFor(language)) }
+            )
+            Divider()
         }
     }
 }

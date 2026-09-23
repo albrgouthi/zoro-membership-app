@@ -26,6 +26,13 @@ object SupabaseClient {
             .header("Authorization", "Bearer $ANON_KEY")
             .build()
 
+    suspend fun getMerchants(categoryId: String): List<Merchant> = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("$BASE_URL/rest/v1/merchants?select=*&category_id=eq.$categoryId&status=eq.approved")
+            .header("apikey", ANON_KEY)
+            .header("Authorization", "Bearer $ANON_KEY")
+            .build()
+
         client.newCall(request).execute().use { response ->
             val body = response.body?.string()
             if (!response.isSuccessful) {
@@ -45,4 +52,17 @@ data class Category(
 ) {
     fun nameFor(languageCode: String): String =
         name_i18n[languageCode] ?: name_i18n["en"] ?: "Unnamed"
+}
+
+@Serializable
+data class Merchant(
+    val id: String,
+    val display_name_i18n: Map<String, String> = emptyMap(),
+    val bio_i18n: Map<String, String> = emptyMap()
+) {
+    fun nameFor(languageCode: String): String =
+        display_name_i18n[languageCode] ?: display_name_i18n["en"] ?: "Unnamed"
+
+    fun bioFor(languageCode: String): String =
+        bio_i18n[languageCode] ?: bio_i18n["en"] ?: ""
 }
