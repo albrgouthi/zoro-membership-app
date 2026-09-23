@@ -26,6 +26,15 @@ object SupabaseClient {
             .header("Authorization", "Bearer $ANON_KEY")
             .build()
 
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string()
+            if (!response.isSuccessful) {
+                throw Exception("HTTP ${response.code}: ${body ?: "no body"}")
+            }
+            json.decodeFromString(body ?: "[]")
+        }
+    }
+
     suspend fun getMerchants(categoryId: String): List<Merchant> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/merchants?select=*&category_id=eq.$categoryId&status=eq.approved")
