@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ZoroApp() {
     var language by remember { mutableStateOf("en") }
