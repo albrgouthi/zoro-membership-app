@@ -27,9 +27,11 @@ object SupabaseClient {
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return@withContext emptyList()
-            val body = response.body?.string() ?: return@withContext emptyList()
-            json.decodeFromString(body)
+            val body = response.body?.string()
+            if (!response.isSuccessful) {
+                throw Exception("HTTP ${response.code}: ${body ?: "no body"}")
+            }
+            json.decodeFromString(body ?: "[]")
         }
     }
 }
