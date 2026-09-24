@@ -43,6 +43,9 @@ object AuthClient {
         return AuthUser(id, email)
     }
 
+    fun getAccessToken(context: Context): String? =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString("access_token", null)
+
     fun clearSession(context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
     }

@@ -73,10 +73,12 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
+    val accessToken = AuthClient.getAccessToken(context)
+
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                categories = SupabaseClient.getCategories()
+                categories = SupabaseClient.getCategories(accessToken)
             } catch (e: Exception) {
                 errorMessage = e.message
             } finally {
@@ -90,7 +92,7 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
         isLoading = true
         errorMessage = null
         try {
-            merchants = SupabaseClient.getMerchants(category.id)
+            merchants = SupabaseClient.getMerchants(category.id, accessToken)
         } catch (e: Exception) {
             errorMessage = e.message
         } finally {
@@ -103,7 +105,7 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
         isLoading = true
         errorMessage = null
         try {
-            offers = SupabaseClient.getOffers(merchant.id)
+            offers = SupabaseClient.getOffers(merchant.id, accessToken)
         } catch (e: Exception) {
             errorMessage = e.message
         } finally {

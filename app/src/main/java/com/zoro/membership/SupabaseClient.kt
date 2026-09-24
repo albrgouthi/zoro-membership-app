@@ -8,9 +8,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
- * Minimal Supabase REST wrapper. Uses the public "anon" key, which is safe
- * to ship in the app — real data protection comes from the Row Level
- * Security policies defined in the database (see 001_init_schema.sql).
+ * Minimal Supabase REST wrapper. `apikey` is always the public anon key
+ * (required by Supabase on every request). `Authorization` is the user's
+ * real access token when they're logged in, or the anon key otherwise —
+ * this is what lets Row Level Security policies correctly identify who's
+ * asking, instead of every request looking anonymous even after login.
  */
 object SupabaseClient {
     private val client = OkHttpClient()
@@ -19,11 +21,13 @@ object SupabaseClient {
     private const val BASE_URL = BuildConfig.SUPABASE_URL
     private const val ANON_KEY = BuildConfig.SUPABASE_ANON_KEY
 
-    suspend fun getCategories(): List<Category> = withContext(Dispatchers.IO) {
+    private fun authHeader(userToken: String?) = userToken ?: ANON_KEY
+
+    suspend fun getCategories(userToken: String? = null): List<Category> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/categories?select=*&order=sort_order")
             .header("apikey", ANON_KEY)
-            .header("Authorization", "Bearer $ANON_KEY")
+            .header("Authorization", "Bearer ${authHeader(userToken)}")
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -35,11 +39,11 @@ object SupabaseClient {
         }
     }
 
-    suspend fun getMerchants(categoryId: String): List<Merchant> = withContext(Dispatchers.IO) {
+    suspend fun getMerchants(categoryId: String, userToken: String? = null): List<Merchant> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/merchants?select=*&category_id=eq.$categoryId&status=eq.approved")
             .header("apikey", ANON_KEY)
-            .header("Authorization", "Bearer $ANON_KEY")
+            .header("Authorization", "Bearer ${authHeader(userToken)}")
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -51,11 +55,11 @@ object SupabaseClient {
         }
     }
 
-    suspend fun getOffers(merchantId: String): List<Offer> = withContext(Dispatchers.IO) {
+    suspend fun getOffers(merchantId: String, userToken: String? = null): List<Offer> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/offers?select=*&merchant_id=eq.$merchantId&status=eq.active")
             .header("apikey", ANON_KEY)
-            .header("Authorization", "Bearer $ANON_KEY")
+            .header("Authorization", "Bearer ${authHeader(userToken)}")
             .build()
 
         client.newCall(request).execute().use { response ->
