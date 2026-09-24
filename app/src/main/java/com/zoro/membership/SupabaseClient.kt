@@ -102,7 +102,8 @@ data class Offer(
     val title_i18n: Map<String, String> = emptyMap(),
     val terms_i18n: Map<String, String> = emptyMap(),
     val discount_type: String? = null,
-    val value: Double? = null
+    val value: Double? = null,
+    val min_spend_usd_cents: Int? = null
 ) {
     fun titleFor(languageCode: String): String =
         title_i18n[languageCode] ?: title_i18n["en"] ?: "Offer"
@@ -116,4 +117,7 @@ data class Offer(
         "bogo" -> "Buy 1 Get 1 Free"
         else -> "Special offer"
     }
+
+    fun condition(): String? =
+        min_spend_usd_cents?.let { "Spend $${it / 100}+ to unlock" }
 }

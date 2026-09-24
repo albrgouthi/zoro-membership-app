@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun MembershipScreen(context: Context, user: AuthClient.AuthUser, onSignOut: () -> Unit) {
+fun MembershipScreen(context: Context, user: AuthClient.AuthUser, onSignOut: () -> Unit, onShowCard: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -66,6 +66,12 @@ fun MembershipScreen(context: Context, user: AuthClient.AuthUser, onSignOut: () 
         }
 
         Spacer(Modifier.height(16.dp))
+
+        Button(onClick = onShowCard, modifier = Modifier.fillMaxWidth()) {
+            Text("Show My Card")
+        }
+
+        Spacer(Modifier.height(8.dp))
 
         Button(onClick = { /* upgrade flow comes with Stripe integration */ }, modifier = Modifier.fillMaxWidth()) {
             Text("Manage Membership")

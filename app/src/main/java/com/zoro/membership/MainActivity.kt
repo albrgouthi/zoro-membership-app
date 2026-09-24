@@ -69,6 +69,7 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
     var selectedMerchant by remember { mutableStateOf<Merchant?>(null) }
     var offers by remember { mutableStateOf<List<Offer>>(emptyList()) }
     var redeemingOffer by remember { mutableStateOf<Offer?>(null) }
+    var showCard by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -118,26 +119,25 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
             TopAppBar(
                 title = {
                     Text(
-                        when (currentTab) {
-                            Tab.HOME -> when {
-                                redeemingOffer != null -> "Redeem"
-                                selectedMerchant != null -> selectedMerchant!!.nameFor(language)
-                                selectedCategory != null -> selectedCategory!!.nameFor(language)
-                                else -> "Zoro"
-                            }
-                            Tab.MARKETPLACE -> "Marketplace"
-                            Tab.MEMBERSHIP -> "Membership"
-                            Tab.ORDERS -> "My Orders"
+                        when {
+                            redeemingOffer != null || showCard -> "My Card"
+                            currentTab == Tab.HOME && selectedMerchant != null -> selectedMerchant!!.nameFor(language)
+                            currentTab == Tab.HOME && selectedCategory != null -> selectedCategory!!.nameFor(language)
+                            currentTab == Tab.HOME -> "Zoro"
+                            currentTab == Tab.MARKETPLACE -> "Marketplace"
+                            currentTab == Tab.MEMBERSHIP -> "Membership"
+                            else -> "My Orders"
                         }
                     )
                 },
                 navigationIcon = {
-                    val showBack = currentTab == Tab.HOME &&
-                        (selectedCategory != null || selectedMerchant != null || redeemingOffer != null)
+                    val showBack = redeemingOffer != null || showCard ||
+                        (currentTab == Tab.HOME && (selectedCategory != null || selectedMerchant != null))
                     if (showBack) {
                         IconButton(onClick = {
                             when {
                                 redeemingOffer != null -> redeemingOffer = null
+                                showCard -> showCard = false
                                 selectedMerchant != null -> selectedMerchant = null
                                 else -> selectedCategory = null
                             }
@@ -183,17 +183,17 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            when (currentTab) {
-                Tab.HOME -> when {
+            when {
+                redeemingOffer != null || showCard -> RedeemScreen(
+                    offer = redeemingOffer,
+                    user = user,
+                    language = language
+                )
+                currentTab == Tab.HOME -> when {
                     isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                     errorMessage != null -> Text(
                         "Something went wrong: $errorMessage",
                         modifier = Modifier.align(Alignment.Center).padding(24.dp)
-                    )
-                    redeemingOffer != null -> RedeemScreen(
-                        offer = redeemingOffer!!,
-                        memberId = user.id,
-                        language = language
                     )
                     selectedMerchant != null -> StoreDetailScreen(
                         merchant = selectedMerchant!!,
@@ -212,9 +212,14 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
                         onSelect = { selectedMerchant = it }
                     )
                 }
-                Tab.MARKETPLACE -> ComingSoon("Marketplace")
-                Tab.MEMBERSHIP -> MembershipScreen(context = context, user = user, onSignOut = onSignOut)
-                Tab.ORDERS -> ComingSoon("My Orders")
+                currentTab == Tab.MARKETPLACE -> ComingSoon("Marketplace")
+                currentTab == Tab.MEMBERSHIP -> MembershipScreen(
+                    context = context,
+                    user = user,
+                    onSignOut = onSignOut,
+                    onShowCard = { showCard = true }
+                )
+                else -> ComingSoon("My Orders")
             }
         }
     }
