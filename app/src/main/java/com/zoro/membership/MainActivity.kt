@@ -3,10 +3,19 @@ package com.zoro.membership
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
@@ -176,13 +185,58 @@ fun CategoryListScreen(categories: List<Category>, language: String, onSelect: (
         Text("No categories yet.", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center))
         return
     }
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        item(span = { GridItemSpan(2) }) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+            ) {
+                Column(Modifier.padding(20.dp)) {
+                    Text(
+                        "Savings at your favorite places",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Browse a category to see live deals",
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                    )
+                }
+            }
+        }
         items(categories) { category ->
-            ListItem(
-                headlineContent = { Text(category.nameFor(language)) },
-                modifier = Modifier.clickable { onSelect(category) }
-            )
-            Divider()
+            val visual = visualFor(category.icon)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = visual.color.copy(alpha = 0.15f)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .aspectRatio(1f)
+                    .clickable { onSelect(category) }
+            ) {
+                Column(
+                    Modifier.fillMaxSize().padding(16.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(visual.emoji, fontSize = 40.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        category.nameFor(language),
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        color = visual.color
+                    )
+                }
+            }
         }
     }
 }
@@ -193,13 +247,38 @@ fun MerchantListScreen(merchants: List<Merchant>, language: String) {
         Text("No stores in this category yet.", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center))
         return
     }
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
         items(merchants) { merchant ->
-            ListItem(
-                headlineContent = { Text(merchant.nameFor(language)) },
-                supportingContent = { Text(merchant.bioFor(language)) }
-            )
-            Divider()
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(merchant.nameFor(language).take(1).uppercase(), fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(merchant.nameFor(language), fontWeight = FontWeight.Bold)
+                        Text(
+                            merchant.bioFor(language),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }
