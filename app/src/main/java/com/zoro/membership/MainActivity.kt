@@ -66,6 +66,9 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var merchants by remember { mutableStateOf<List<Merchant>>(emptyList()) }
+    var selectedMerchant by remember { mutableStateOf<Merchant?>(null) }
+    var offers by remember { mutableStateOf<List<Offer>>(emptyList()) }
+    var redeemingOffer by remember { mutableStateOf<Offer?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -95,13 +98,31 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
         }
     }
 
+    LaunchedEffect(selectedMerchant) {
+        val merchant = selectedMerchant ?: return@LaunchedEffect
+        isLoading = true
+        errorMessage = null
+        try {
+            offers = SupabaseClient.getOffers(merchant.id)
+        } catch (e: Exception) {
+            errorMessage = e.message
+        } finally {
+            isLoading = false
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         when (currentTab) {
-                            Tab.HOME -> selectedCategory?.nameFor(language) ?: "Zoro"
+                            Tab.HOME -> when {
+                                redeemingOffer != null -> "Redeem"
+                                selectedMerchant != null -> selectedMerchant!!.nameFor(language)
+                                selectedCategory != null -> selectedCategory!!.nameFor(language)
+                                else -> "Zoro"
+                            }
                             Tab.MARKETPLACE -> "Marketplace"
                             Tab.MEMBERSHIP -> "Membership"
                             Tab.ORDERS -> "My Orders"
@@ -109,8 +130,16 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
                     )
                 },
                 navigationIcon = {
-                    if (currentTab == Tab.HOME && selectedCategory != null) {
-                        IconButton(onClick = { selectedCategory = null }) {
+                    val showBack = currentTab == Tab.HOME &&
+                        (selectedCategory != null || selectedMerchant != null || redeemingOffer != null)
+                    if (showBack) {
+                        IconButton(onClick = {
+                            when {
+                                redeemingOffer != null -> redeemingOffer = null
+                                selectedMerchant != null -> selectedMerchant = null
+                                else -> selectedCategory = null
+                            }
+                        }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
@@ -159,12 +188,27 @@ fun ZoroApp(user: AuthClient.AuthUser, onSignOut: () -> Unit) {
                         "Something went wrong: $errorMessage",
                         modifier = Modifier.align(Alignment.Center).padding(24.dp)
                     )
+                    redeemingOffer != null -> RedeemScreen(
+                        offer = redeemingOffer!!,
+                        memberId = user.id,
+                        language = language
+                    )
+                    selectedMerchant != null -> StoreDetailScreen(
+                        merchant = selectedMerchant!!,
+                        offers = offers,
+                        language = language,
+                        onRedeem = { redeemingOffer = it }
+                    )
                     selectedCategory == null -> CategoryListScreen(
                         categories = categories,
                         language = language,
                         onSelect = { selectedCategory = it }
                     )
-                    else -> MerchantListScreen(merchants = merchants, language = language)
+                    else -> MerchantListScreen(
+                        merchants = merchants,
+                        language = language,
+                        onSelect = { selectedMerchant = it }
+                    )
                 }
                 Tab.MARKETPLACE -> ComingSoon("Marketplace")
                 Tab.MEMBERSHIP -> MembershipScreen(context = context, user = user, onSignOut = onSignOut)
@@ -242,7 +286,7 @@ fun CategoryListScreen(categories: List<Category>, language: String, onSelect: (
 }
 
 @Composable
-fun MerchantListScreen(merchants: List<Merchant>, language: String) {
+fun MerchantListScreen(merchants: List<Merchant>, language: String, onSelect: (Merchant) -> Unit) {
     if (merchants.isEmpty()) {
         Text("No stores in this category yet.", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center))
         return
@@ -256,7 +300,7 @@ fun MerchantListScreen(merchants: List<Merchant>, language: String) {
             Card(
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().clickable { onSelect(merchant) }
             ) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(

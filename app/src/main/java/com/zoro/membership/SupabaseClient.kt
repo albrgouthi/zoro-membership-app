@@ -50,6 +50,22 @@ object SupabaseClient {
             json.decodeFromString(body ?: "[]")
         }
     }
+
+    suspend fun getOffers(merchantId: String): List<Offer> = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("$BASE_URL/rest/v1/offers?select=*&merchant_id=eq.$merchantId&status=eq.active")
+            .header("apikey", ANON_KEY)
+            .header("Authorization", "Bearer $ANON_KEY")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string()
+            if (!response.isSuccessful) {
+                throw Exception("HTTP ${response.code}: ${body ?: "no body"}")
+            }
+            json.decodeFromString(body ?: "[]")
+        }
+    }
 }
 
 @Serializable
@@ -74,4 +90,26 @@ data class Merchant(
 
     fun bioFor(languageCode: String): String =
         bio_i18n[languageCode] ?: bio_i18n["en"] ?: ""
+}
+
+@Serializable
+data class Offer(
+    val id: String,
+    val title_i18n: Map<String, String> = emptyMap(),
+    val terms_i18n: Map<String, String> = emptyMap(),
+    val discount_type: String? = null,
+    val value: Double? = null
+) {
+    fun titleFor(languageCode: String): String =
+        title_i18n[languageCode] ?: title_i18n["en"] ?: "Offer"
+
+    fun termsFor(languageCode: String): String =
+        terms_i18n[languageCode] ?: terms_i18n["en"] ?: ""
+
+    fun summary(): String = when (discount_type) {
+        "percent" -> "${value?.toInt() ?: 0}% off"
+        "fixed" -> "$${value?.toInt() ?: 0} off"
+        "bogo" -> "Buy 1 Get 1 Free"
+        else -> "Special offer"
+    }
 }
